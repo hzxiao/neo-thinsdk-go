@@ -1,13 +1,13 @@
-package Neo
+package neo
 
 import (
-	"math/big"
-	"crypto/ecdsa"
 	"bytes"
-	"fmt"
+	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/sha256"
-	"crypto/ripemd160"
+	"fmt"
+	"golang.org/x/crypto/ripemd160"
+	"math/big"
 )
 
 type Point struct {
@@ -15,16 +15,14 @@ type Point struct {
 	Y *big.Int
 }
 
-
 // ToBytes converts a Bitcoin private key to a 32-byte byte slice.
-func PrivateToBytes(priv *ecdsa.PrivateKey) (b []byte)  {
+func PrivateToBytes(priv *ecdsa.PrivateKey) (b []byte) {
 	d := priv.D.Bytes()
 	/* Pad D to 32 bytes */
 	padded_d := append(bytes.Repeat([]byte{0x00}, 32-len(d)), d...)
 
 	return padded_d
 }
-
 
 // FromBytes converts a 32-byte byte slice to a Bitcoin private key and derives the corresponding Bitcoin public key.
 func PrivateFromBytes(priv *ecdsa.PrivateKey, b []byte) (err error) {
@@ -43,9 +41,9 @@ func PrivateFromBytes(priv *ecdsa.PrivateKey, b []byte) (err error) {
 
 func PrivateToWIF(priv *ecdsa.PrivateKey) (wif string) {
 	/*
-	priv_bytes := PrivateToBytes(priv)
-	priv_bytes = append(priv_bytes, NEO_PRIVATE_SENTINEL)
-	wif = b58checkencode(NEO_PRIVATE_VERSION, priv_bytes)
+		priv_bytes := PrivateToBytes(priv)
+		priv_bytes = append(priv_bytes, NEO_PRIVATE_SENTINEL)
+		wif = b58checkencode(NEO_PRIVATE_VERSION, priv_bytes)
 	*/
 
 	priv_bytes := make([]byte, 33)
@@ -91,7 +89,7 @@ func FromWIF(priv *ecdsa.PrivateKey, wif string) (err error) {
 
 // DecompressPubkey parses a public key in the 33-byte compressed format.
 func DecompressPubkey(pubkey []byte) (*ecdsa.PublicKey, error) {
-	x, y := new(big.Int),new(big.Int)
+	x, y := new(big.Int), new(big.Int)
 	if len(pubkey) != 33 {
 		return nil, fmt.Errorf("invalid public key")
 	}
@@ -103,21 +101,21 @@ func DecompressPubkey(pubkey []byte) (*ecdsa.PublicKey, error) {
 	}
 	x.SetBytes(pubkey[1:])
 
-	xxx := new(big.Int).Mul(x,x)
-	xxx.Mul(xxx,x)
+	xxx := new(big.Int).Mul(x, x)
+	xxx.Mul(xxx, x)
 
-	ax := new(big.Int).Mul(big.NewInt(3),x)
+	ax := new(big.Int).Mul(big.NewInt(3), x)
 
 	yy := new(big.Int).Sub(xxx, ax)
-	yy.Add(yy,elliptic.P256().Params().B)
+	yy.Add(yy, elliptic.P256().Params().B)
 
-	y1 := new(big.Int).ModSqrt(yy,elliptic.P256().Params().P)
+	y1 := new(big.Int).ModSqrt(yy, elliptic.P256().Params().P)
 	if y1 == nil {
 		return nil, fmt.Errorf("can not revcovery public key")
 	}
 
 	y2 := new(big.Int).Neg(y1)
-	y2.Mod(y2,elliptic.P256().Params().P)
+	y2.Mod(y2, elliptic.P256().Params().P)
 
 	if pubkey[0] == 0x02 {
 		if y1.Bit(0) == 0 {
@@ -143,17 +141,17 @@ func CompressPubkey(pubkey *ecdsa.PublicKey) []byte {
 	//fmt.Println("cy:",pubkey.Y)
 	// big.Int.Bytes() will need padding in the case of leading zero bytes
 	/*
-	params := pubkey.Curve.Params()
-	curveOrderByteSize := params.P.BitLen() / 8
-	xBytes := pubkey.X.Bytes()
-	signature := make([]byte, curveOrderByteSize+1)
-	if pubkey.Y.Bit(0) == 1 {
-		signature[0] = 0x03
-	} else {
-		signature[0] = 0x02
-	}
-	copy(signature[1+curveOrderByteSize-len(xBytes):], xBytes)
-	return signature
+		params := pubkey.Curve.Params()
+		curveOrderByteSize := params.P.BitLen() / 8
+		xBytes := pubkey.X.Bytes()
+		signature := make([]byte, curveOrderByteSize+1)
+		if pubkey.Y.Bit(0) == 1 {
+			signature[0] = 0x03
+		} else {
+			signature[0] = 0x02
+		}
+		copy(signature[1+curveOrderByteSize-len(xBytes):], xBytes)
+		return signature
 	*/
 	data := make([]byte, 33)
 	if pubkey.Y.Bit(0) == 0 {
@@ -165,21 +163,21 @@ func CompressPubkey(pubkey *ecdsa.PublicKey) []byte {
 	return data
 }
 
-func PublicToAddress(pubkey *ecdsa.PublicKey) (address string)  {
+func PublicToAddress(pubkey *ecdsa.PublicKey) (address string) {
 	return getAddressFromPublicKey(pubkey)
 }
 
-func getScriptFromPublicKey(pubkey *ecdsa.PublicKey) ( []byte)  {
+func getScriptFromPublicKey(pubkey *ecdsa.PublicKey) []byte {
 	script := make([]byte, 35, 35)
 	script[0] = 33
 	pubbytes := CompressPubkey(pubkey)
 	copy(script[1:], pubbytes)
-	script[34] =172
+	script[34] = 172
 
 	return script
 }
 
-func getScriptHashFromScript(script []byte) ([]byte) {
+func getScriptHashFromScript(script []byte) []byte {
 	sha256_h := sha256.New()
 	sha256_h.Reset()
 	sha256_h.Write(script)

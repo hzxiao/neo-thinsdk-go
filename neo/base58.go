@@ -1,9 +1,9 @@
-package Neo
+package neo
 
 import (
-	"fmt"
-	"crypto/sha256"
 	"bytes"
+	"crypto/sha256"
+	"fmt"
 	"math/big"
 	"strings"
 )

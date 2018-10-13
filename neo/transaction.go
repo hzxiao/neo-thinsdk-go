@@ -1,23 +1,22 @@
-package Neo
+package neo
 
 import (
 	"bytes"
-	"github.com/neo-thinsdk-go/utils"
-	"encoding/binary"
 	"crypto/ecdsa"
+	"encoding/binary"
+	"github.com/hzxiao/neo-thinsdk-go/simplejson"
+	"github.com/hzxiao/neo-thinsdk-go/utils"
 	"math/big"
-	"github.com/neo-thinsdk-go/simplejson"
-	//"fmt"
 )
 
 const (
-	MinerTransaction byte = 0x00
-	IssueTransaction byte = 0x01
-	ClaimTransaction byte = 0x02
+	MinerTransaction      byte = 0x00
+	IssueTransaction      byte = 0x01
+	ClaimTransaction      byte = 0x02
 	EnrollmentTransaction byte = 0x20
-	RegisterTransaction byte = 0x40
-	ContractTransaction byte = 0x80
-	PublishTransaction byte = 0xd0
+	RegisterTransaction   byte = 0x40
+	ContractTransaction   byte = 0x80
+	PublishTransaction    byte = 0xd0
 	InvocationTransaction byte = 0xd1
 )
 
@@ -85,7 +84,7 @@ const (
 
 type Attribute struct {
 	usage byte
-	data []byte
+	data  []byte
 }
 
 const D uint64 = 100000000
@@ -95,18 +94,18 @@ type Fixed8 struct {
 }
 
 type TransactionOutput struct {
-	assetId []byte
-	value Fixed8
+	assetId   []byte
+	value     Fixed8
 	toAddress []byte
 }
 
 type TransactionInput struct {
-	hash []byte
+	hash  []byte
 	index uint16
 }
 
 type Witness struct {
-	InvocationScript []byte
+	InvocationScript   []byte
 	VerificationScript []byte
 }
 
@@ -117,7 +116,7 @@ type IExtData interface {
 
 type InvokeTransData struct {
 	script []byte
-	gas Fixed8
+	gas    Fixed8
 }
 
 func (self *InvokeTransData) Serialize(tx *Transaction, buf *bytes.Buffer) {
@@ -143,62 +142,61 @@ func (self *InvokeTransData) Deserialize(tx *Transaction, buf *bytes.Buffer) {
 	}
 }
 
-func (self *Witness)GetAddress() string  {
+func (self *Witness) GetAddress() string {
 	hash := getScriptHashFromScript(self.VerificationScript)
 	address, _ := getAddressFromScriptHash(hash)
 	return address
 }
 
-func (self *Witness)GetHashStr() string  {
+func (self *Witness) GetHashStr() string {
 	hash := getScriptHashFromScript(self.VerificationScript)
 	strHash := utils.ToHexString(hash)
 	return strHash
 }
 
-func (self *Witness) IsSmartContract() bool  {
+func (self *Witness) IsSmartContract() bool {
 	if len(self.VerificationScript) != 35 {
 		return true
 	}
-	if self.VerificationScript[0] != byte(len(self.VerificationScript) - 2) {
+	if self.VerificationScript[0] != byte(len(self.VerificationScript)-2) {
 		return true
 	}
-	if self.VerificationScript[len(self.VerificationScript) - 1] != 0xac {
+	if self.VerificationScript[len(self.VerificationScript)-1] != 0xac {
 		return true
 	}
 	return false
 }
 
-
 type Transaction struct {
-	txtype byte
-	version byte
+	txtype     byte
+	version    byte
 	attributes []Attribute
-	inputs []TransactionInput
-	outputs []TransactionOutput
-	witnesses []Witness
-	extdata IExtData
+	inputs     []TransactionInput
+	outputs    []TransactionOutput
+	witnesses  []Witness
+	extdata    IExtData
 }
 
-func (self *Transaction)GetMessage() ([]byte, bool)  {
+func (self *Transaction) GetMessage() ([]byte, bool) {
 	buf := &bytes.Buffer{}
 	self.SerializeUnsigned(buf)
 
 	return buf.Bytes(), true
 }
 
-func (self *Transaction)GetRawData() ([]byte, bool)  {
+func (self *Transaction) GetRawData() ([]byte, bool) {
 	buf := &bytes.Buffer{}
 	self.Serialize(buf)
 	return buf.Bytes(), true
 }
 
-func (self *Transaction)GetHash() ([]byte, bool)  {
+func (self *Transaction) GetHash() ([]byte, bool) {
 	buf := &bytes.Buffer{}
 	self.Serialize(buf)
 	return buf.Bytes(), true
 }
 
-func (self *Transaction)AddWitness(signData []byte, pubkey *ecdsa.PublicKey, addrs string )  {
+func (self *Transaction) AddWitness(signData []byte, pubkey *ecdsa.PublicKey, addrs string) {
 	buf := &bytes.Buffer{}
 	self.SerializeUnsigned(buf)
 
@@ -222,7 +220,7 @@ func (self *Transaction)AddWitness(signData []byte, pubkey *ecdsa.PublicKey, add
 	self.AddWitnessScript(vscript, iscript)
 }
 
-func (self *Transaction)AddWitnessScript(script []byte, iscript []byte) bool {
+func (self *Transaction) AddWitnessScript(script []byte, iscript []byte) bool {
 	//scripthash := getScriptHashFromScript(script)
 	newwit := Witness{}
 	newwit.VerificationScript = script
@@ -240,7 +238,7 @@ func (self *Transaction)AddWitnessScript(script []byte, iscript []byte) bool {
 	return true
 }
 
-func (self *Transaction)SerializeUnsigned(buf *bytes.Buffer)  {
+func (self *Transaction) SerializeUnsigned(buf *bytes.Buffer) {
 	buf.WriteByte(uint8(self.txtype))
 	buf.WriteByte(self.version)
 	if self.txtype == ContractTransaction {
@@ -300,7 +298,7 @@ func (self *Transaction)SerializeUnsigned(buf *bytes.Buffer)  {
 	}
 }
 
-func (self *Transaction)Serialize(buf *bytes.Buffer)  {
+func (self *Transaction) Serialize(buf *bytes.Buffer) {
 	self.SerializeUnsigned(buf)
 
 	length := len(self.witnesses)
@@ -315,7 +313,7 @@ func (self *Transaction)Serialize(buf *bytes.Buffer)  {
 	}
 }
 
-func (self *Transaction)Deserialize(buf *bytes.Buffer)  {
+func (self *Transaction) Deserialize(buf *bytes.Buffer) {
 	txtype, _ := buf.ReadByte()
 	self.txtype = uint8(txtype)
 	version, _ := buf.ReadByte()
@@ -336,7 +334,7 @@ func (self *Transaction)Deserialize(buf *bytes.Buffer)  {
 	if countAttri > 0 {
 		self.attributes = make([]Attribute, countAttri)
 	}
-	var i uint64 = 0;
+	var i uint64 = 0
 	for ; i < countAttri; i++ {
 		usage, _ := buf.ReadByte()
 		self.attributes[i].usage = usage
@@ -403,21 +401,21 @@ func (self *Transaction)Deserialize(buf *bytes.Buffer)  {
 }
 
 type Utxo struct {
-	Hash string
+	Hash  string
 	Value uint64
-	N uint16
+	N     uint16
 }
 
 type CreateSignParams struct {
-	TxType byte
+	TxType  byte
 	Version byte
-	PriKey string
-	From string
-	To string
+	PriKey  string
+	From    string
+	To      string
 	AssetId string
-	Value uint64
-	Data []byte
-	Utxos []Utxo
+	Value   uint64
+	Data    []byte
+	Utxos   []Utxo
 }
 
 func CreateContractTransaction(params *CreateSignParams) (string, bool) {
@@ -488,17 +486,17 @@ func GetNep5Transfer(scriptAddress string, from, to string, num big.Int) ([]byte
 
 	jsonData := make(map[string]interface{})
 
-	fromParam := "(address)" + from;
+	fromParam := "(address)" + from
 	jsonData["from"] = fromParam
 
-	toParam := "(address)" + to;
+	toParam := "(address)" + to
 	jsonData["to"] = toParam
 
 	strInt := num.String()
 	numParam := "(integer)" + strInt
 	jsonData["num"] = numParam
 
-	paramList := &simplejson.Json{Data:jsonData}
+	paramList := &simplejson.Json{Data: jsonData}
 
 	sb.EmitParamJson(paramList)
 	sb.EmitPushString("transfer")
@@ -542,7 +540,7 @@ func CreateInvocationTransaction(params *CreateSignParams) (string, bool) {
 	fromAddress := params.From
 	extdata := &InvokeTransData{}
 	extdata.script = params.Data
-	extdata.gas.value = 100000000;
+	extdata.gas.value = 100000000
 	tx.extdata = extdata
 
 	unsignedData, _ := tx.GetMessage()

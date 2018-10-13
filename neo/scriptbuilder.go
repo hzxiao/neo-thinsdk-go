@@ -1,11 +1,11 @@
-package Neo
+package neo
 
 import (
 	"bytes"
+	"github.com/hzxiao/neo-thinsdk-go/opcode"
+	"github.com/hzxiao/neo-thinsdk-go/simplejson"
+	"github.com/hzxiao/neo-thinsdk-go/utils"
 	"math/big"
-	"github.com/neo-thinsdk-go/OpCode"
-	"github.com/neo-thinsdk-go/utils"
-	"github.com/neo-thinsdk-go/simplejson"
 	"strings"
 )
 
@@ -17,49 +17,49 @@ func (sb *ScriptBuilder) toBytes() []byte {
 	return sb.buf.Bytes()
 }
 
-func (sb *ScriptBuilder) Emit(opcode byte, arg []byte)   {
+func (sb *ScriptBuilder) Emit(opcode byte, arg []byte) {
 	sb.buf.WriteByte(opcode)
 	if len(arg) != 0 {
 		sb.buf.Write(arg)
 	}
 }
 
-func (sb *ScriptBuilder) EmitAppCall(scriptHash []byte, useTailCall bool)  {
+func (sb *ScriptBuilder) EmitAppCall(scriptHash []byte, useTailCall bool) {
 	if len(scriptHash) != 20 {
 		panic("runtime error: script hash length error")
 	}
 
-	opcode := OpCode.TAILCALL
+	c := opcode.TAILCALL
 	if !useTailCall {
-		opcode = OpCode.APPCALL
+		c = opcode.APPCALL
 	}
-	sb.Emit(opcode, scriptHash)
+	sb.Emit(c, scriptHash)
 }
 
-func (sb *ScriptBuilder) EmitJump(opcode byte, offset int16) {
-	if opcode != OpCode.JMP && opcode != OpCode.JMPIF && opcode != OpCode.JMPIFNOT && opcode != OpCode.CALL {
+func (sb *ScriptBuilder) EmitJump(opc byte, offset int16) {
+	if opc != opcode.JMP && opc != opcode.JMPIF && opc != opcode.JMPIFNOT && opc != opcode.CALL {
 		panic("runtime error: opcode error")
 	}
 	var buf bytes.Buffer
 	utils.WriteUint16(&buf, uint16(offset))
-	sb.Emit(opcode, buf.Bytes())
+	sb.Emit(opc, buf.Bytes())
 }
 
-func (sb *ScriptBuilder) EmitPushNumber(number big.Int)  {
+func (sb *ScriptBuilder) EmitPushNumber(number big.Int) {
 	var minusOne = big.NewInt(-1)
 	if number.Cmp(minusOne) == 0 {
-		sb.Emit(OpCode.PUSHM1, []byte{})
+		sb.Emit(opcode.PUSHM1, []byte{})
 		return
 	}
 	var zero = big.NewInt(0)
 	if number.Cmp(zero) == 0 {
-		sb.Emit(OpCode.PUSH0, []byte{})
+		sb.Emit(opcode.PUSH0, []byte{})
 		return
 	}
 
 	var sixteen = big.NewInt(16)
 	if number.Cmp(zero) == 1 && number.Cmp(sixteen) == -1 {
-		opcode := OpCode.PUSH1 - 1 + (uint8)(number.Uint64())
+		opcode := opcode.PUSH1 - 1 + (uint8)(number.Uint64())
 		sb.Emit(opcode, []byte{})
 		return
 	}
@@ -67,39 +67,39 @@ func (sb *ScriptBuilder) EmitPushNumber(number big.Int)  {
 	sb.EmitPushBytes(number.Bytes())
 }
 
-func (sb *ScriptBuilder) EmitPushBool(b bool)  {
+func (sb *ScriptBuilder) EmitPushBool(b bool) {
 	if b {
-		sb.Emit(OpCode.PUSHT, []byte{})
+		sb.Emit(opcode.PUSHT, []byte{})
 	} else {
-		sb.Emit(OpCode.PUSHF, []byte{})
+		sb.Emit(opcode.PUSHF, []byte{})
 	}
 }
 
-func (sb *ScriptBuilder) EmitPushBytes(bytes []byte)  {
+func (sb *ScriptBuilder) EmitPushBytes(bytes []byte) {
 	length := len(bytes)
-	if length <= int(OpCode.PUSHBYTES75) {
+	if length <= int(opcode.PUSHBYTES75) {
 		sb.buf.WriteByte(byte(length))
 		sb.buf.Write(bytes)
 	} else if length < 0x100 {
-		sb.Emit(OpCode.PUSHDATA1, []byte{})
+		sb.Emit(opcode.PUSHDATA1, []byte{})
 		sb.buf.WriteByte(byte(length))
 		sb.buf.Write(bytes)
 	} else if length < 0x10000 {
-		sb.Emit(OpCode.PUSHDATA2, []byte{})
+		sb.Emit(opcode.PUSHDATA2, []byte{})
 		utils.WriteUint16(&sb.buf, uint16(length))
 		sb.buf.Write(bytes)
 	} else {
-		sb.Emit(OpCode.PUSHDATA4, []byte{})
+		sb.Emit(opcode.PUSHDATA4, []byte{})
 		utils.WriteUint32(&sb.buf, uint32(length))
 		sb.buf.Write(bytes)
 	}
 }
 
-func (sb *ScriptBuilder) EmitPushString(data string)  {
+func (sb *ScriptBuilder) EmitPushString(data string) {
 	sb.EmitPushBytes([]byte(data))
 }
 
-func (sb *ScriptBuilder) EmitSysCall(api string)  {
+func (sb *ScriptBuilder) EmitSysCall(api string) {
 	hexdata := []byte(api)
 	length := len(hexdata)
 	if length <= 0 || length > 252 {
@@ -109,10 +109,10 @@ func (sb *ScriptBuilder) EmitSysCall(api string)  {
 	var buf bytes.Buffer
 	buf.WriteByte(uint8(length))
 	buf.Write(hexdata)
-	sb.Emit(OpCode.SYSCALL, buf.Bytes())
- }
+	sb.Emit(opcode.SYSCALL, buf.Bytes())
+}
 
-func getParamBytes(buf * bytes.Buffer, str string) bool {
+func getParamBytes(buf *bytes.Buffer, str string) bool {
 	bytes := []byte(str)
 	if bytes[0] != '(' {
 		return false
@@ -120,55 +120,55 @@ func getParamBytes(buf * bytes.Buffer, str string) bool {
 	length := len(bytes)
 
 	if strings.Index(str, "(str)") == 0 {
-		strData := utils.Substr(str, 5, length - 5)
+		strData := utils.Substr(str, 5, length-5)
 		buf.Write([]byte(strData))
 	} else if strings.Index(str, "(string)") == 0 {
-		strData := utils.Substr(str, 8, length - 8)
+		strData := utils.Substr(str, 8, length-8)
 		buf.Write([]byte(strData))
 	} else if strings.Index(str, "(bytes)") == 0 {
-		strData := utils.Substr(str, 7, length - 7)
+		strData := utils.Substr(str, 7, length-7)
 		data, _ := utils.ToBytes(strData)
 		buf.Write(data)
 	} else if strings.Index(str, "([])") == 0 {
-		strData := utils.Substr(str, 4, length - 4)
+		strData := utils.Substr(str, 4, length-4)
 		data, _ := utils.ToBytes(strData)
 		buf.Write(data)
 	} else if strings.Index(str, "(address)") == 0 {
-		strData := utils.Substr(str, 9, length - 9)
+		strData := utils.Substr(str, 9, length-9)
 		pubHash, _ := getPublicKeyHashFromAddress(strData)
 		buf.Write(pubHash)
 	} else if strings.Index(str, "(addr)") == 0 {
-		strData := utils.Substr(str, 6, length - 6)
+		strData := utils.Substr(str, 6, length-6)
 		pubHash, _ := getPublicKeyHashFromAddress(strData)
 		buf.Write(pubHash)
 	} else if strings.Index(str, "(integer)") == 0 {
-		strData := utils.Substr(str, 9, length - 9)
+		strData := utils.Substr(str, 9, length-9)
 		value := &big.Int{}
 		value, _ = value.SetString(strData, 10)
 		data := value.Bytes()
 		buf.Write(data)
 	} else if strings.Index(str, "(int)") == 0 {
-		strData := utils.Substr(str, 5, length - 5)
+		strData := utils.Substr(str, 5, length-5)
 		value := &big.Int{}
 		value, _ = value.SetString(strData, 10)
 		data := value.Bytes()
 		buf.Write(data)
 
 	} else if strings.Index(str, "(hexinteger)") == 0 {
-		strData := utils.Substr(str, 12, length - 12)
+		strData := utils.Substr(str, 12, length-12)
 		data, _ := utils.ToBytes(strData)
 		buf.Write(data)
 
 	} else if strings.Index(str, "(hexint)") == 0 {
-		strData := utils.Substr(str, 8, length - 8)
+		strData := utils.Substr(str, 8, length-8)
 		data, _ := utils.ToBytes(strData)
 		buf.Write(data)
 	} else if strings.Index(str, "(hex)") == 0 {
-		strData := utils.Substr(str, 5, length - 5)
+		strData := utils.Substr(str, 5, length-5)
 		data, _ := utils.ToBytes(strData)
 		buf.Write(data)
 	} else if strings.Index(str, "(hex256)") == 0 || strings.Index(str, "(int256)") == 0 {
-		strData := utils.Substr(str, 8, length - 8)
+		strData := utils.Substr(str, 8, length-8)
 		data, _ := utils.ToBytes(strData)
 		if len(data) != 32 {
 			return false
@@ -176,21 +176,21 @@ func getParamBytes(buf * bytes.Buffer, str string) bool {
 		buf.Write(data)
 
 	} else if strings.Index(str, "(uint256)") == 0 {
-		strData := utils.Substr(str, 9, length - 9)
+		strData := utils.Substr(str, 9, length-9)
 		data, _ := utils.ToBytes(strData)
 		if len(data) != 32 {
 			return false
 		}
 		buf.Write(data)
-	} else if strings.Index(str, "(hex160)") == 0 || strings.Index(str,"(int160)" ) == 0 {
-		strData := utils.Substr(str, 8, length - 8)
+	} else if strings.Index(str, "(hex160)") == 0 || strings.Index(str, "(int160)") == 0 {
+		strData := utils.Substr(str, 8, length-8)
 		data, _ := utils.ToBytes(strData)
 		if len(data) != 20 {
 			return false
 		}
 		buf.Write(data)
 	} else if strings.Index(str, "(uint160)") == 0 {
-		strData := utils.Substr(str, 9, length - 9)
+		strData := utils.Substr(str, 9, length-9)
 		data, _ := utils.ToBytes(strData)
 		if len(data) != 20 {
 			return false
@@ -231,6 +231,6 @@ func (sb *ScriptBuilder) pushParam(param interface{}) {
 	}
 }
 
-func (sb *ScriptBuilder) EmitParamJson(param *simplejson.Json)  {
+func (sb *ScriptBuilder) EmitParamJson(param *simplejson.Json) {
 	sb.pushParam(param.Data)
 }

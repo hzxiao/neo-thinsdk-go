@@ -1,0 +1,1 @@
+# NEO thinSDK for Golang

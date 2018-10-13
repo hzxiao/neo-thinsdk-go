@@ -1,13 +1,14 @@
-package Neo
+package neo
 
 import (
-	"crypto/elliptic"
-	"math/big"
-	"fmt"
 	"crypto/ecdsa"
-	"crypto/sha256"
+	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
+	"fmt"
+	"math/big"
 )
+
 // NewSigningKey generates a random P-256 ECDSA private key.
 func NewSigningKey() (*ecdsa.PrivateKey, error) {
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -54,56 +55,55 @@ func Verify(data, signature []byte, pubkey *ecdsa.PublicKey) bool {
 	return ecdsa.Verify(pubkey, digest[:], r, s)
 }
 
-
-func ecRecovery(data []byte, rawSign []byte) (*ecdsa.PublicKey,*ecdsa.PublicKey, error) {
+func ecRecovery(data []byte, rawSign []byte) (*ecdsa.PublicKey, *ecdsa.PublicKey, error) {
 	r := big.Int{}
 	s := big.Int{}
 	sigLen := len(rawSign)
 	r.SetBytes(rawSign[:(sigLen / 2)])
 	s.SetBytes(rawSign[(sigLen / 2):])
 
-	expy := new(big.Int).Sub(elliptic.P256().Params().N,big.NewInt(2))
-	rinv := new(big.Int).Exp(&r,expy ,elliptic.P256().Params().N)
+	expy := new(big.Int).Sub(elliptic.P256().Params().N, big.NewInt(2))
+	rinv := new(big.Int).Exp(&r, expy, elliptic.P256().Params().N)
 	z := new(big.Int).SetBytes(data)
 
-	xxx := new(big.Int).Mul(&r,&r)
-	xxx.Mul(xxx,&r)
+	xxx := new(big.Int).Mul(&r, &r)
+	xxx.Mul(xxx, &r)
 
-	ax := new(big.Int).Mul(big.NewInt(3),&r)
+	ax := new(big.Int).Mul(big.NewInt(3), &r)
 
 	yy := new(big.Int).Sub(xxx, ax)
-	yy.Add(yy,elliptic.P256().Params().B)
+	yy.Add(yy, elliptic.P256().Params().B)
 
 	//y_squard := new(big.Int).Mod(tmp4,elliptic.P256().Params().P)
 
-	y1 := new(big.Int).ModSqrt(yy,elliptic.P256().Params().P)
+	y1 := new(big.Int).ModSqrt(yy, elliptic.P256().Params().P)
 	if y1 == nil {
 		return nil, nil, fmt.Errorf("can not revcovery public key")
 	}
 
 	y2 := new(big.Int).Neg(y1)
-	y2.Mod(y2,elliptic.P256().Params().P)
-	p1, p2 := elliptic.P256().ScalarMult(&r,y1,s.Bytes())
+	y2.Mod(y2, elliptic.P256().Params().P)
+	p1, p2 := elliptic.P256().ScalarMult(&r, y1, s.Bytes())
 	p3, p4 := elliptic.P256().ScalarBaseMult(z.Bytes())
 
 	p5 := new(big.Int).Neg(p4)
-	p5.Mod(p5,elliptic.P256().Params().P)
+	p5.Mod(p5, elliptic.P256().Params().P)
 
-	q1, q2 := elliptic.P256().Add(p1,p2,p3,p5)
-	q3, q4 := elliptic.P256().ScalarMult(q1,q2,rinv.Bytes())
+	q1, q2 := elliptic.P256().Add(p1, p2, p3, p5)
+	q3, q4 := elliptic.P256().ScalarMult(q1, q2, rinv.Bytes())
 
-	n1, n2 := elliptic.P256().ScalarMult(&r,y2,s.Bytes())
+	n1, n2 := elliptic.P256().ScalarMult(&r, y2, s.Bytes())
 	n3, n4 := elliptic.P256().ScalarBaseMult(z.Bytes())
 
 	n5 := new(big.Int).Neg(n4)
-	n5.Mod(n5,elliptic.P256().Params().P)
+	n5.Mod(n5, elliptic.P256().Params().P)
 
-	q5, q6 := elliptic.P256().Add(n1,n2,n3,n5)
-	q7, q8 := elliptic.P256().ScalarMult(q5,q6,rinv.Bytes())
+	q5, q6 := elliptic.P256().Add(n1, n2, n3, n5)
+	q7, q8 := elliptic.P256().ScalarMult(q5, q6, rinv.Bytes())
 
-	key1 := ecdsa.PublicKey{Curve:elliptic.P256(),X:q3,Y:q4}
-	key2 := ecdsa.PublicKey{Curve:elliptic.P256(),X:q7,Y:q8}
-	return &key1,&key2, nil
+	key1 := ecdsa.PublicKey{Curve: elliptic.P256(), X: q3, Y: q4}
+	key2 := ecdsa.PublicKey{Curve: elliptic.P256(), X: q7, Y: q8}
+	return &key1, &key2, nil
 }
 
 func comparePublicKey(key1, key2 *ecdsa.PublicKey) bool {
@@ -115,6 +115,7 @@ func comparePublicKey(key1, key2 *ecdsa.PublicKey) bool {
 		return false
 	}
 }
+
 /*
 func testCompressPublicKey() {
 	fmt.Println("--------------")

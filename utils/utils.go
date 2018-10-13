@@ -2,23 +2,23 @@ package utils
 
 import (
 	"bytes"
-	"encoding/hex"
 	"encoding/binary"
+	"encoding/hex"
 )
 
-func WriteUint16(buf *bytes.Buffer, value uint16)  {
+func WriteUint16(buf *bytes.Buffer, value uint16) {
 	buf.WriteByte(byte(value))
 	buf.WriteByte(byte(value >> 8))
 }
 
-func WriteUint32(buf *bytes.Buffer, value uint32)  {
+func WriteUint32(buf *bytes.Buffer, value uint32) {
 	buf.WriteByte(byte(value))
 	buf.WriteByte(byte(value >> 8))
 	buf.WriteByte(byte(value >> 16))
 	buf.WriteByte(byte(value >> 24))
 }
 
-func WriteUint64(buf *bytes.Buffer, value uint64)  {
+func WriteUint64(buf *bytes.Buffer, value uint64) {
 	buf.WriteByte(byte(value))
 	buf.WriteByte(byte(value >> 8))
 	buf.WriteByte(byte(value >> 16))
@@ -29,10 +29,10 @@ func WriteUint64(buf *bytes.Buffer, value uint64)  {
 	buf.WriteByte(byte(value >> 56))
 }
 
-func BytesReverse(bytes []byte) []byte  {
+func BytesReverse(bytes []byte) []byte {
 	ret := make([]byte, len(bytes))
 	copy(ret, bytes)
-	for i, j := 0, len(ret) - 1; i < j; i, j = i + 1, j - 1 {
+	for i, j := 0, len(ret)-1; i < j; i, j = i+1, j-1 {
 		ret[i], ret[j] = ret[j], ret[i]
 	}
 	return ret
@@ -67,7 +67,7 @@ func Substr(str string, start, length int) string {
 	return string(rs[start:end])
 }
 
-func ToHexString(data []byte) (string) {
+func ToHexString(data []byte) string {
 	str := hex.EncodeToString(data)
 	return str
 }
@@ -81,7 +81,7 @@ func ToBytes(strHex string) ([]byte, bool) {
 	return data, true
 }
 
-func WriteVarInt(buf *bytes.Buffer, value uint64 )  {
+func WriteVarInt(buf *bytes.Buffer, value uint64) {
 	if value > 0xffffffff {
 		buf.WriteByte(byte(0xff))
 
