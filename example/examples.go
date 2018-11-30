@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/ecdsa"
 	"github.com/hzxiao/neo-thinsdk-go/neo"
+	"github.com/hzxiao/neo-thinsdk-go/utils"
 	"math/big"
 )
 
@@ -58,6 +59,11 @@ func Nep5Transfer() (string, bool) {
 	return raw, ok
 }
 
+
+func NNSNameHash(domain string) string {
+	return ""
+}
+
 func main() {
 	priv, _ := neo.NewSigningKey()
 	wif := neo.PrivateToWIF(priv)
@@ -68,11 +74,19 @@ func main() {
 
 	//ARbjp1wPh5XJchZpSjqHzGVQnnpTxNR1x7
 	priv2 := &ecdsa.PrivateKey{}
-	neo.FromWIF(priv2, "L4RmQvd6PVzBTgYLpYagknNjhZxsHBbJq4ky7Zd3vB7AguSM7gF1")
+	neo.PrivateFromWIF(priv2, "L4RmQvd6PVzBTgYLpYagknNjhZxsHBbJq4ky7Zd3vB7AguSM7gF1")
 	address2 := neo.PublicToAddress(&priv2.PublicKey)
 	println(address2)
 
 	NeoTransfer()
 
-	//Nep5Transfer()
+	Nep5Transfer()
+
+	b, err := neo.InvokeNNSScript("")
+	if err != nil {
+		panic(err)
+	}
+	println(utils.ToHexString(b))
+
+
 }

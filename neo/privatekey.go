@@ -50,17 +50,16 @@ func PrivateToWIF(priv *ecdsa.PrivateKey) (wif string) {
 	d := priv.D.Bytes()
 	copy(priv_bytes[0:32], d)
 	priv_bytes[32] = 0x01
-	wif = b58checkencode(NEO_PRIVATE_VERSION, priv_bytes)
+	wif = Base58CheckEncode(NEO_PRIVATE_VERSION, priv_bytes)
 
 	return wif
 }
 
-// FromWIF converts a Wallet Import Format string to a Bitcoin private key and derives the corresponding Bitcoin public key.
-func FromWIF(priv *ecdsa.PrivateKey, wif string) (err error) {
-	/* See https://en.bitcoin.it/wiki/Wallet_import_format */
-
+// PrivateFromWIF converts a Wallet Import Format string to a Bitcoin private key and derives the corresponding Bitcoin public key.
+// See https://en.bitcoin.it/wiki/Wallet_import_format
+func PrivateFromWIF(priv *ecdsa.PrivateKey, wif string) (err error) {
 	/* Base58 Check Decode the WIF string */
-	ver, priv_bytes, err := b58checkdecode(wif)
+	ver, priv_bytes, err := Base58CheckDecode(wif)
 	if err != nil {
 		return err
 	}
@@ -87,8 +86,8 @@ func FromWIF(priv *ecdsa.PrivateKey, wif string) (err error) {
 	return nil
 }
 
-// DecompressPubkey parses a public key in the 33-byte compressed format.
-func DecompressPubkey(pubkey []byte) (*ecdsa.PublicKey, error) {
+// DecompressPublicKey parses a public key in the 33-byte compressed format.
+func DecompressPublicKey(pubkey []byte) (*ecdsa.PublicKey, error) {
 	x, y := new(big.Int), new(big.Int)
 	if len(pubkey) != 33 {
 		return nil, fmt.Errorf("invalid public key")
@@ -135,8 +134,8 @@ func DecompressPubkey(pubkey []byte) (*ecdsa.PublicKey, error) {
 	return &ecdsa.PublicKey{X: x, Y: y, Curve: elliptic.P256()}, nil
 }
 
-// CompressPubkey encodes a public key to the 33-byte compressed format.
-func CompressPubkey(pubkey *ecdsa.PublicKey) []byte {
+// CompressPublicKey encodes a public key to the 33-byte compressed format.
+func CompressPublicKey(pubkey *ecdsa.PublicKey) []byte {
 	//fmt.Println("cx:",pubkey.X)
 	//fmt.Println("cy:",pubkey.Y)
 	// big.Int.Bytes() will need padding in the case of leading zero bytes
@@ -170,7 +169,7 @@ func PublicToAddress(pubkey *ecdsa.PublicKey) (address string) {
 func getScriptFromPublicKey(pubkey *ecdsa.PublicKey) []byte {
 	script := make([]byte, 35, 35)
 	script[0] = 33
-	pubbytes := CompressPubkey(pubkey)
+	pubbytes := CompressPublicKey(pubkey)
 	copy(script[1:], pubbytes)
 	script[34] = 172
 
@@ -198,7 +197,7 @@ func getAddressFromScriptHash(scriptHash []byte) (string, bool) {
 		return "", false
 	}
 
-	address := b58checkencode(NEO_ADDRESS_VERSION, scriptHash)
+	address := Base58CheckEncode(NEO_ADDRESS_VERSION, scriptHash)
 	return address, true
 }
 
@@ -210,7 +209,7 @@ func getAddressFromPublicKey(pubkey *ecdsa.PublicKey) string {
 }
 
 func getPublicKeyHashFromAddress(address string) ([]byte, bool) {
-	ver, bytes, err := b58checkdecode(address)
+	ver, bytes, err := Base58CheckDecode(address)
 	if err != nil {
 		return nil, false
 	}

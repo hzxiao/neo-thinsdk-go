@@ -59,8 +59,8 @@ func (sb *ScriptBuilder) EmitPushNumber(number big.Int) {
 
 	var sixteen = big.NewInt(16)
 	if number.Cmp(zero) == 1 && number.Cmp(sixteen) == -1 {
-		opcode := opcode.PUSH1 - 1 + (uint8)(number.Uint64())
-		sb.Emit(opcode, []byte{})
+		opc := opcode.PUSH1 - 1 + (uint8)(number.Uint64())
+		sb.Emit(opc, []byte{})
 		return
 	}
 

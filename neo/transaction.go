@@ -463,7 +463,7 @@ func CreateContractTransaction(params *CreateSignParams) (string, bool) {
 
 	unsignedData, _ := tx.GetMessage()
 	privKey := &ecdsa.PrivateKey{}
-	FromWIF(privKey, params.PriKey)
+	PrivateFromWIF(privKey, params.PriKey)
 
 	signature, err := Sign(unsignedData, privKey)
 	if err != nil {
@@ -484,17 +484,21 @@ func GetNep5Transfer(scriptAddress string, from, to string, num big.Int) ([]byte
 	assetId, _ := utils.ToBytes(scriptAddress)
 	assetId = utils.BytesReverse(assetId)
 
-	jsonData := make(map[string]interface{})
+	//jsonData := make(map[string]interface{})
+	var jsonData []interface{}
 
 	fromParam := "(address)" + from
-	jsonData["from"] = fromParam
+	//jsonData["from"] = fromParam
+	jsonData = append(jsonData, fromParam)
 
 	toParam := "(address)" + to
-	jsonData["to"] = toParam
+	//jsonData["to"] = toParam
+	jsonData = append(jsonData, toParam)
 
 	strInt := num.String()
 	numParam := "(integer)" + strInt
-	jsonData["num"] = numParam
+	//jsonData["num"] = numParam
+	jsonData = append(jsonData, numParam)
 
 	paramList := &simplejson.Json{Data: jsonData}
 
@@ -505,6 +509,41 @@ func GetNep5Transfer(scriptAddress string, from, to string, num big.Int) ([]byte
 	rawdata := sb.toBytes()
 	return rawdata, true
 }
+
+func InvokeNNSScript(domain string) ([]byte, error) {
+
+	var nameHash = []byte("2333333333333333333333333333333323333333333333333333333333333333")
+
+	//jsonData := make(map[string]interface{})
+	var jsonData []interface{}
+
+	fromParam := "(str)" + "addr"
+	//jsonData["from"] = fromParam
+	jsonData = append(jsonData, fromParam)
+
+	toParam := "(hex256)" + utils.ToHexString(nameHash)
+	//jsonData["to"] = toParam
+	jsonData = append(jsonData, toParam)
+
+	numParam := "(str)" + ""
+	//jsonData["num"] = numParam
+	jsonData = append(jsonData, numParam)
+
+	paramList := &simplejson.Json{Data: jsonData}
+
+	sb := &ScriptBuilder{}
+	sb.EmitParamJson(paramList)
+	sb.EmitPushString("resolve")
+	script, err := utils.Uint160DecodeString("348387116c4a75e420663277d9c02049907128c7")
+	if err != nil {
+		return nil, err
+	}
+	sb.EmitAppCall(script.BytesReverse(), false)
+
+	rawdata := sb.toBytes()
+	return rawdata, nil
+}
+
 
 func CreateInvocationTransaction(params *CreateSignParams) (string, bool) {
 	tx := &Transaction{}
@@ -545,7 +584,7 @@ func CreateInvocationTransaction(params *CreateSignParams) (string, bool) {
 
 	unsignedData, _ := tx.GetMessage()
 	privKey := &ecdsa.PrivateKey{}
-	FromWIF(privKey, params.PriKey)
+	PrivateFromWIF(privKey, params.PriKey)
 
 	signature, err := Sign(unsignedData, privKey)
 	if err != nil {

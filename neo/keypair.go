@@ -5,6 +5,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/sha256"
+	"errors"
 	"fmt"
 	"math/big"
 )
@@ -17,6 +18,9 @@ func NewSigningKey() (*ecdsa.PrivateKey, error) {
 
 // Sign signs arbitrary data using ECDSA.
 func Sign(data []byte, privkey *ecdsa.PrivateKey) ([]byte, error) {
+	if privkey == nil {
+		return nil, errors.New("nil private key")
+	}
 	// hash message
 	digest := sha256.Sum256(data)
 

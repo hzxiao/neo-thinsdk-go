@@ -8,16 +8,15 @@ import (
 	"strings"
 )
 
+const BitcoinBase58Table = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+
 /******************************************************************************/
 /* Base-58 Encode/Decode */
 /******************************************************************************/
 
 // b58encode encodes a byte slice b into a base-58 encoded string.
+// See https://en.bitcoin.it/wiki/Base58Check_encoding
 func b58encode(b []byte) (s string) {
-	/* See https://en.bitcoin.it/wiki/Base58Check_encoding */
-
-	const BITCOIN_BASE58_TABLE = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-
 	/* Convert big endian bytes to big int */
 	x := new(big.Int).SetBytes(b)
 
@@ -32,25 +31,22 @@ func b58encode(b []byte) (s string) {
 		/* x, r = (x / 58, x % 58) */
 		x.QuoRem(x, m, r)
 		/* Prepend ASCII character */
-		s = string(BITCOIN_BASE58_TABLE[r.Int64()]) + s
+		s = string(BitcoinBase58Table[r.Int64()]) + s
 	}
 
 	return s
 }
 
 // b58decode decodes a base-58 encoded string into a byte slice b.
+// See https://en.bitcoin.it/wiki/Base58Check_encoding
 func b58decode(s string) (b []byte, err error) {
-	/* See https://en.bitcoin.it/wiki/Base58Check_encoding */
-
-	const BITCOIN_BASE58_TABLE = "123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
-
 	/* Initialize */
 	x := big.NewInt(0)
 	m := big.NewInt(58)
 
 	/* Convert string to big int */
 	for i := 0; i < len(s); i++ {
-		b58index := strings.IndexByte(BITCOIN_BASE58_TABLE, s[i])
+		b58index := strings.IndexByte(BitcoinBase58Table, s[i])
 		if b58index == -1 {
 			return nil, fmt.Errorf("Invalid base-58 character encountered: '%c', index %d.", s[i], i)
 		}
@@ -69,23 +65,23 @@ func b58decode(s string) (b []byte, err error) {
 /* Base-58 Check Encode/Decode */
 /******************************************************************************/
 
-// b58checkencode encodes version ver and byte slice b into a base-58 check encoded string.
-func b58checkencode(ver uint8, b []byte) (s string) {
+// Base58CheckEncode encodes version ver and byte slice b into a base-58 check encoded string.
+func Base58CheckEncode(ver uint8, b []byte) (s string) {
 	/* Prepend version */
 	bcpy := append([]byte{ver}, b...)
 
 	/* Create a new SHA256 context */
-	sha256_h := sha256.New()
+	h := sha256.New()
 
 	/* SHA256 Hash #1 */
-	sha256_h.Reset()
-	sha256_h.Write(bcpy)
-	hash1 := sha256_h.Sum(nil)
+	h.Reset()
+	h.Write(bcpy)
+	hash1 := h.Sum(nil)
 
 	/* SHA256 Hash #2 */
-	sha256_h.Reset()
-	sha256_h.Write(hash1)
-	hash2 := sha256_h.Sum(nil)
+	h.Reset()
+	h.Write(hash1)
+	hash2 := h.Sum(nil)
 
 	/* Append first four bytes of hash */
 	bcpy = append(bcpy, hash2[0:4]...)
@@ -104,8 +100,8 @@ func b58checkencode(ver uint8, b []byte) (s string) {
 	return s
 }
 
-// b58checkdecode decodes base-58 check encoded string s into a version ver and byte slice b.
-func b58checkdecode(s string) (ver uint8, b []byte, err error) {
+// Base58CheckDecode decodes base-58 check encoded string s into a version ver and byte slice b.
+func Base58CheckDecode(s string) (ver uint8, b []byte, err error) {
 	/* Decode base58 string */
 	b, err = b58decode(s)
 	if err != nil {
@@ -126,17 +122,17 @@ func b58checkdecode(s string) (ver uint8, b []byte, err error) {
 	}
 
 	/* Create a new SHA256 context */
-	sha256_h := sha256.New()
+	h := sha256.New()
 
 	/* SHA256 Hash #1 */
-	sha256_h.Reset()
-	sha256_h.Write(b[:len(b)-4])
-	hash1 := sha256_h.Sum(nil)
+	h.Reset()
+	h.Write(b[:len(b)-4])
+	hash1 := h.Sum(nil)
 
 	/* SHA256 Hash #2 */
-	sha256_h.Reset()
-	sha256_h.Write(hash1)
-	hash2 := sha256_h.Sum(nil)
+	h.Reset()
+	h.Write(hash1)
+	hash2 := h.Sum(nil)
 
 	/* Compare checksum */
 	if bytes.Compare(hash2[0:4], b[len(b)-4:]) != 0 {
