@@ -115,35 +115,6 @@ func comparePublicKey(key1, key2 *ecdsa.PublicKey) bool {
 	y := key2.Y.Cmp(key2.Y)
 	if x == 0 && y == 0 {
 		return true
-	} else {
-		return false
 	}
+	return false
 }
-
-/*
-func testCompressPublicKey() {
-	fmt.Println("--------------")
-	key, err := NewSigningKey()
-	if err != nil {
-		log.Fatal(err)
-	}
-	compressed := CompressPubkey(&key.PublicKey)
-	log.Println(compressed)
-	uncompressed,err := DecompressPubkey(compressed)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Println(uncompressed)
-	result := comparePublicKey(&key.PublicKey,uncompressed)
-	if result != true {
-		log.Fatal("result does not match!")
-	}
-
-}
-
-func main() {
-
-	testCompressPublicKey()
-}
-
-*/
