@@ -479,6 +479,20 @@ func CreateContractTransaction(params *CreateSignParams) (string, bool) {
 	return raw, true
 }
 
+func InvocationToScript(scriptAddress string, operation string, args []interface{}) []byte {
+	sb := &ScriptBuilder{}
+	assetId, _ := utils.ToBytes(scriptAddress)
+	assetId = utils.BytesReverse(assetId)
+
+	paramList := &simplejson.Json{Data: args}
+
+	sb.EmitParamJson(paramList)
+	sb.EmitPushString(operation)
+	sb.EmitAppCall(assetId, false)
+
+	return sb.toBytes()
+}
+
 func GetNep5Transfer(scriptAddress string, from, to string, num big.Int) ([]byte, bool) {
 	sb := &ScriptBuilder{}
 	assetId, _ := utils.ToBytes(scriptAddress)
@@ -544,7 +558,6 @@ func InvokeNNSScript(domain string) ([]byte, error) {
 	return rawdata, nil
 }
 
-
 func CreateInvocationTransaction(params *CreateSignParams) (string, bool) {
 	tx := &Transaction{}
 	tx.txtype = InvocationTransaction
@@ -598,4 +611,54 @@ func CreateInvocationTransaction(params *CreateSignParams) (string, bool) {
 	raw := utils.ToHexString(rawData)
 
 	return raw, true
+}
+
+func CreateTx(txType byte, params *CreateSignParams) (string, error) {
+	tx := &Transaction{}
+	tx.txtype = txType
+	tx.version = params.Version
+
+	for _, utxo := range params.Utxos {
+		txid, _ := utils.ToBytes(utxo.Hash)
+		tx.inputs = append(tx.inputs, TransactionInput{
+			hash:  utils.BytesReverse(txid),
+			index: utxo.N,
+		})
+	}
+
+	if params.Value > 0 {
+		assetId, _ := utils.ToBytes(params.AssetId)
+		pubkeyhash, _ := getPublicKeyHashFromAddress(params.To)
+
+		output := TransactionOutput{
+			assetId:   utils.BytesReverse(assetId),
+			toAddress: pubkeyhash,
+		}
+		output.value.value = uint64(params.Value)
+		tx.outputs = append(tx.outputs, output)
+	}
+
+	if len(params.Data) > 0 {
+		extdata := &InvokeTransData{}
+		extdata.script = params.Data
+		extdata.gas.value = 0
+		tx.extdata = extdata
+	}
+
+	unsignedData, _ := tx.GetMessage()
+	privKey := &ecdsa.PrivateKey{}
+	PrivateFromWIF(privKey, params.PriKey)
+
+	signature, err := Sign(unsignedData, privKey)
+	if err != nil {
+		return "", err
+	}
+
+	pubKey := privKey.PublicKey
+	tx.AddWitness(signature, &pubKey, params.From)
+
+	rawData, _ := tx.GetRawData()
+	raw := utils.ToHexString(rawData)
+
+	return raw, nil
 }
