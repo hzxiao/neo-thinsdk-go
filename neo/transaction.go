@@ -418,7 +418,7 @@ type CreateSignParams struct {
 	Utxos   []Utxo
 }
 
-func CreateContractTransaction(params *CreateSignParams) (string, bool) {
+func CreateContractTransaction(params *CreateSignParams) (string, string, bool) {
 	tx := &Transaction{}
 	tx.txtype = ContractTransaction
 	tx.version = params.Version
@@ -438,7 +438,7 @@ func CreateContractTransaction(params *CreateSignParams) (string, bool) {
 	value := params.Value
 	toAddress := params.To
 	if sum < value {
-		return "", false
+		return "", "", false
 	}
 	assetId := params.AssetId
 	output := TransactionOutput{}
@@ -455,10 +455,11 @@ func CreateContractTransaction(params *CreateSignParams) (string, bool) {
 	if left > 0 {
 		output2 := TransactionOutput{}
 		output2.assetId = vAssetId
+		println(left)
 		output2.value.value = left
 		pkh, _ := getPublicKeyHashFromAddress(fromAddress)
 		output2.toAddress = pkh
-		tx.outputs = append(tx.outputs, output)
+		tx.outputs = append(tx.outputs, output2)
 	}
 
 	unsignedData, _ := tx.GetMessage()
@@ -467,7 +468,7 @@ func CreateContractTransaction(params *CreateSignParams) (string, bool) {
 
 	signature, err := Sign(unsignedData, privKey)
 	if err != nil {
-		return "", false
+		return "", "", false
 	}
 
 	pubKey := privKey.PublicKey
@@ -476,7 +477,10 @@ func CreateContractTransaction(params *CreateSignParams) (string, bool) {
 	rawData, _ := tx.GetRawData()
 	raw := utils.ToHexString(rawData)
 
-	return raw, true
+	var buf = &bytes.Buffer{}
+	tx.SerializeUnsigned(buf)
+	txBody := utils.ToHexString(buf.Bytes())
+	return txBody, raw, true
 }
 
 func InvocationToScript(scriptAddress string, operation string, args []interface{}) []byte {
@@ -613,20 +617,22 @@ func CreateInvocationTransaction(params *CreateSignParams) (string, bool) {
 	return raw, true
 }
 
-func CreateTx(txType byte, params *CreateSignParams) (string, error) {
+func CreateTx(txType byte, params *CreateSignParams) (string, string, error) {
 	tx := &Transaction{}
 	tx.txtype = txType
 	tx.version = params.Version
 
+	var sum uint64
 	for _, utxo := range params.Utxos {
 		txid, _ := utils.ToBytes(utxo.Hash)
 		tx.inputs = append(tx.inputs, TransactionInput{
 			hash:  utils.BytesReverse(txid),
 			index: utxo.N,
 		})
+		sum += utxo.Value
 	}
 
-	if params.Value > 0 {
+	if params.Value > 0 && sum >= params.Value {
 		assetId, _ := utils.ToBytes(params.AssetId)
 		pubkeyhash, _ := getPublicKeyHashFromAddress(params.To)
 
@@ -636,12 +642,26 @@ func CreateTx(txType byte, params *CreateSignParams) (string, error) {
 		}
 		output.value.value = uint64(params.Value)
 		tx.outputs = append(tx.outputs, output)
+
+		sum -= params.Value
+	}
+
+	if sum > 0 {
+		assetId, _ := utils.ToBytes(params.AssetId)
+		pubkeyhash, _ := getPublicKeyHashFromAddress(params.From)
+
+		output := TransactionOutput{
+			assetId:   utils.BytesReverse(assetId),
+			toAddress: pubkeyhash,
+		}
+		output.value.value = sum
+		tx.outputs = append(tx.outputs, output)
 	}
 
 	if len(params.Data) > 0 {
 		extdata := &InvokeTransData{}
 		extdata.script = params.Data
-		extdata.gas.value = 0
+		extdata.gas.value = 100000000
 		tx.extdata = extdata
 	}
 
@@ -651,7 +671,7 @@ func CreateTx(txType byte, params *CreateSignParams) (string, error) {
 
 	signature, err := Sign(unsignedData, privKey)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	pubKey := privKey.PublicKey
@@ -660,5 +680,8 @@ func CreateTx(txType byte, params *CreateSignParams) (string, error) {
 	rawData, _ := tx.GetRawData()
 	raw := utils.ToHexString(rawData)
 
-	return raw, nil
+	var buf = &bytes.Buffer{}
+	tx.SerializeUnsigned(buf)
+	txBody := utils.ToHexString(buf.Bytes())
+	return txBody, raw, nil
 }
