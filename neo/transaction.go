@@ -122,8 +122,6 @@ type InvokeTransData struct {
 func (self *InvokeTransData) Serialize(tx *Transaction, buf *bytes.Buffer) {
 	length := len(self.script)
 	utils.WriteVarInt(buf, uint64(length))
-	// f, _ := utils.ToBytes("230051c1")
-	// buf.Write(f)
 	buf.Write(self.script)
 	if tx.version >= 1 {
 		data := make([]byte, 8)

@@ -146,13 +146,13 @@ func getParamBytes(buf *bytes.Buffer, str string) bool {
 		value := &big.Int{}
 		value, _ = value.SetString(strData, 10)
 		data := value.Bytes()
-		buf.Write(data)
+		buf.Write(utils.BytesReverse(data))
 	} else if strings.Index(str, "(int)") == 0 {
 		strData := utils.Substr(str, 5, length-5)
 		value := &big.Int{}
 		value, _ = value.SetString(strData, 10)
 		data := value.Bytes()
-		buf.Write(data)
+		buf.Write(utils.BytesReverse(data))
 
 	} else if strings.Index(str, "(hexinteger)") == 0 {
 		strData := utils.Substr(str, 12, length-12)
@@ -217,6 +217,10 @@ func (sb *ScriptBuilder) pushParam(param interface{}) {
 		length := len(v)
 		for i := length - 1; i >= 0; i-- {
 			sb.pushParam(v[i])
+		}
+		sb.EmitPushNumber(*big.NewInt(int64(length)))
+		if length > 0 {
+			sb.Emit(opcode.PACK, nil)
 		}
 	case map[string]interface{}:
 		for _, value := range v {
