@@ -144,7 +144,7 @@ func (self *InvokeTransData) Deserialize(tx *Transaction, buf *bytes.Buffer) {
 
 func (self *Witness) GetAddress() string {
 	hash := getScriptHashFromScript(self.VerificationScript)
-	address, _ := getAddressFromScriptHash(hash)
+	address, _ := GetAddressFromScriptHash(hash)
 	return address
 }
 

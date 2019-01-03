@@ -191,7 +191,7 @@ func getScriptHashFromScript(script []byte) []byte {
 	return pub_hash_2
 }
 
-func getAddressFromScriptHash(scriptHash []byte) (string, bool) {
+func GetAddressFromScriptHash(scriptHash []byte) (string, bool) {
 	length := len(scriptHash)
 	if length != 20 {
 		return "", false
@@ -204,7 +204,7 @@ func getAddressFromScriptHash(scriptHash []byte) (string, bool) {
 func getAddressFromPublicKey(pubkey *ecdsa.PublicKey) string {
 	script := getScriptFromPublicKey(pubkey)
 	scriptHash := getScriptHashFromScript(script)
-	address, _ := getAddressFromScriptHash(scriptHash)
+	address, _ := GetAddressFromScriptHash(scriptHash)
 	return address
 }
 
