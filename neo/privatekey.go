@@ -224,3 +224,20 @@ func getPublicKeyHashFromAddress(address string) ([]byte, bool) {
 
 	return bytes, true
 }
+
+func GetPublicKeyHashFromAddress(address string) ([]byte, bool) {
+	ver, bytes, err := Base58CheckDecode(address)
+	if err != nil {
+		return nil, false
+	}
+
+	if ver != NEO_ADDRESS_VERSION {
+		return nil, false
+	}
+
+	if len(bytes) != (int)(SCRIPT_HASH_LENGTH) {
+		return nil, false
+	}
+
+	return bytes, true
+}

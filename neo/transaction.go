@@ -83,8 +83,8 @@ const (
 )
 
 type Attribute struct {
-	usage byte
-	data  []byte
+	Usage byte
+	Data  []byte
 }
 
 const D uint64 = 100000000
@@ -251,11 +251,10 @@ func (self *Transaction) SerializeUnsigned(buf *bytes.Buffer) {
 
 	length := len(self.attributes)
 	utils.WriteVarInt(buf, uint64(length))
-
 	for i := 0; i < length; i++ {
-		attriData := self.attributes[i].data
-		usage := self.attributes[i].usage
-
+		attriData := self.attributes[i].Data
+		usage := self.attributes[i].Usage
+		buf.WriteByte(usage)
 		if usage == ContractHash || usage == Vote || (usage >= Hash1 && usage <= Hash15) {
 			buf.Write(attriData[0:32])
 		} else if usage == ECDH02 || usage == ECDH03 {
@@ -337,32 +336,32 @@ func (self *Transaction) Deserialize(buf *bytes.Buffer) {
 	var i uint64 = 0
 	for ; i < countAttri; i++ {
 		usage, _ := buf.ReadByte()
-		self.attributes[i].usage = usage
+		self.attributes[i].Usage = usage
 
 		if usage == ContractHash || usage == Vote || (usage >= Hash1 && usage <= Hash15) {
 			attriData := make([]byte, 32)
 			buf.Read(attriData)
-			self.attributes[i].data = attriData
+			self.attributes[i].Data = attriData
 		} else if usage == ECDH02 || usage == ECDH03 {
 			attriData := make([]byte, 33)
 			attriData[0] = usage
 			buf.Read(attriData[1:])
-			self.attributes[i].data = attriData
+			self.attributes[i].Data = attriData
 		} else if usage == Script {
 			attriData := make([]byte, 20)
 			buf.Read(attriData)
-			self.attributes[i].data = attriData
+			self.attributes[i].Data = attriData
 		} else if usage == DescriptionUrl {
 			length, _ := buf.ReadByte()
 			attriData := make([]byte, length)
 			buf.Read(attriData)
-			self.attributes[i].data = attriData
+			self.attributes[i].Data = attriData
 
 		} else if usage == Description || usage >= Remark {
 			length := utils.ReadVarInt(buf, 65535)
 			attriData := make([]byte, length)
 			buf.Read(attriData)
-			self.attributes[i].data = attriData
+			self.attributes[i].Data = attriData
 		} else {
 			panic("runtime error: attribute type error")
 		}
@@ -414,6 +413,7 @@ type CreateSignParams struct {
 	To      string
 	AssetId string
 	Value   uint64
+	Attrs   []Attribute
 	Data    []byte
 	Utxos   []Utxo
 }
@@ -492,7 +492,7 @@ func InvocationToScript(scriptAddress string, operation string, args []interface
 
 	sb.EmitParamJson(paramList)
 	sb.EmitPushString(operation)
-	sb.EmitAppCall(assetId, true)
+	sb.EmitAppCall(assetId, false)
 
 	return sb.toBytes()
 }
@@ -622,6 +622,7 @@ func CreateTx(txType byte, params *CreateSignParams) (string, string, error) {
 	tx.txtype = txType
 	tx.version = params.Version
 
+	tx.attributes = params.Attrs
 	var sum uint64
 	for _, utxo := range params.Utxos {
 		txid, _ := utils.ToBytes(utxo.Hash)
