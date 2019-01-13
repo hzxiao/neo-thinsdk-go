@@ -395,7 +395,29 @@ func (self *Transaction) Deserialize(buf *bytes.Buffer) {
 		buf.Read(valueBytes)
 		self.outputs[i].value.value = binary.LittleEndian.Uint64(valueBytes)
 		toAddress := make([]byte, 20)
+		buf.Read(toAddress)
 		self.outputs[i].toAddress = toAddress
+	}
+
+	witnessCount := utils.ReadVarInt(buf, 65535)
+	for i = 0; i < witnessCount; i++ {
+		w := Witness{}
+		icnt := utils.ReadVarInt(buf, 65535)
+		if icnt > 0 {
+			w.InvocationScript = make([]byte, icnt)
+			buf.Read(w.InvocationScript)
+		}
+		vcnt := utils.ReadVarInt(buf, 65535)
+		if vcnt > 0 {
+			w.VerificationScript = make([]byte, vcnt)
+			buf.Read(w.VerificationScript)
+		}
+
+		self.witnesses = append(self.witnesses, w)
+	}
+
+	if buf.Len() > 0 {
+		panic("len error")
 	}
 }
 
@@ -406,16 +428,18 @@ type Utxo struct {
 }
 
 type CreateSignParams struct {
-	TxType  byte
-	Version byte
-	PriKey  string
-	From    string
-	To      string
-	AssetId string
-	Value   uint64
-	Attrs   []Attribute
-	Data    []byte
-	Utxos   []Utxo
+	TxType     byte
+	Version    byte
+	PriKey     string
+	From       string
+	To         string
+	ToPriKey   string
+	AssetId    string
+	Value      uint64
+	Attrs      []Attribute
+	Data       []byte
+	Utxos      []Utxo
+	DoubleSign bool
 }
 
 func CreateContractTransaction(params *CreateSignParams) (string, string, bool) {
@@ -675,6 +699,26 @@ func CreateTx(txType byte, params *CreateSignParams) (string, string, error) {
 		return "", "", err
 	}
 
+	if params.DoubleSign {
+		if params.ToPriKey == "" {
+			ispt, _ := utils.ToBytes("0000")
+			ok := tx.AddWitnessScript(nil, ispt)
+			if !ok {
+				println("add second witness fail")
+			}
+		} else {
+			toPrivKey := &ecdsa.PrivateKey{}
+			PrivateFromWIF(toPrivKey, params.ToPriKey)
+
+			s, err := Sign(unsignedData, toPrivKey)
+			if err != nil {
+				return "", "", err
+			}
+
+			pubKey := toPrivKey.PublicKey
+			tx.AddWitness(s, &pubKey, params.To)
+		}
+	}
 	pubKey := privKey.PublicKey
 	tx.AddWitness(signature, &pubKey, params.From)
 
