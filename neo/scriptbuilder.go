@@ -146,12 +146,18 @@ func getParamBytes(buf *bytes.Buffer, str string) bool {
 		value := &big.Int{}
 		value, _ = value.SetString(strData, 10)
 		data := value.Bytes()
+		for l := len(data); l < 8; l++ {
+			data = append([]byte{0}, data...)
+		}
 		buf.Write(utils.BytesReverse(data))
 	} else if strings.Index(str, "(int)") == 0 {
 		strData := utils.Substr(str, 5, length-5)
 		value := &big.Int{}
 		value, _ = value.SetString(strData, 10)
 		data := value.Bytes()
+		for l := len(data); l < 8; l++ {
+			data = append([]byte{0}, data...)
+		}
 		buf.Write(utils.BytesReverse(data))
 
 	} else if strings.Index(str, "(hexinteger)") == 0 {
